@@ -321,7 +321,8 @@ export default function Component({ params }) {
             result?.questions ||
             result?.suggestion ||
             result?.other ||
-            result?.comparison
+            result?.comparison ||
+            result?.accessories
           ) {
             let index = 0;
             const typingInterval = setInterval(() => {
@@ -363,7 +364,12 @@ export default function Component({ params }) {
                   ...prevMessages,
                   {
                     text: result?.questions || result?.other || "",
-                    suggestion: result?.suggestion || [],
+                    suggestion: Array.isArray(result?.suggestion)
+                      ? result.suggestion
+                      : [],
+                    accessories: Array.isArray(result?.accessories)
+                      ? result?.accessories
+                      : [],
                     compareInputValue: {
                       item_number_match:
                         result?.comparison?.item_number_match || [],
@@ -833,13 +839,109 @@ export default function Component({ params }) {
                               </AvatarFallback>
                             </Avatar>
                             <div
-                              className={`px-4 py-2 rounded-lg ${
+                              className={`inline-block px-4 py-2 rounded-lg ${
                                 message.isBot
                                   ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
                                   : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
                               } shadow-md`}
                             >
                               {message?.text}
+                              {message?.accessories && (
+                                <>
+                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
+                                    {message?.accessories?.map(
+                                      (product, index) => (
+                                        <Card
+                                          key={index}
+                                          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                        >
+                                          <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                                            <div className="flex justify-between items-start">
+                                              <CardTitle className="text-sm font-bold text-white truncate max-w-full">
+                                                {product.name
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                                  product.name.slice(1)}
+                                              </CardTitle>
+                                            </div>
+                                          </CardHeader>
+                                          <CardContent className="p-2 flex-grow">
+                                            <div className="flex items-center mb-2">
+                                              <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                                              <CardDescription className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                Item No: {product.item_number}
+                                              </CardDescription>
+                                            </div>
+                                            <div className="mb-4">
+                                              <div className="flex items-center mb-1">
+                                                <Info className="w-4 h-4 mr-2 text-blue-500" />
+                                                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                  Overview
+                                                </h3>
+                                              </div>
+                                              <p
+                                                className={`text-sm text-gray-700 dark:text-gray-200 ${
+                                                  expandedItems[index]
+                                                    ? ""
+                                                    : "line-clamp-3"
+                                                }`}
+                                              >
+                                                {product?.overview}
+                                              </p>
+                                              {product?.overview?.length >
+                                                150 && (
+                                                <Button
+                                                  variant="link"
+                                                  onClick={() =>
+                                                    handleExpandToggle(index)
+                                                  }
+                                                  className="mt-1 p-0 h-auto text-blue-500 hover:text-blue-700"
+                                                >
+                                                  {expandedItems[index]
+                                                    ? "Show less"
+                                                    : "Show more"}
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </CardContent>
+                                          <CardFooter className="p-1 bg-gray-50 dark:bg-gray-700">
+                                            <Button
+                                              asChild
+                                              variant="ghost"
+                                              className="w-full justify-between hover:bg-blue-100 dark:hover:bg-blue-900"
+                                            >
+                                              <Link
+                                                href={`/${product.item_number}`}
+                                                target="_blank"
+                                                className="flex items-center"
+                                              >
+                                                <span>View Details</span>
+                                                <ExternalLink className="w-4 h-4 ml-2" />
+                                              </Link>
+                                            </Button>
+                                          </CardFooter>
+                                        </Card>
+                                      )
+                                    )}
+                                  </div>
+                                  <div className="px-2 flex items-center justify-end">
+                                    {message?.suggestion?.length > 0 &&
+                                      selectedItems.length > 0 && (
+                                        <Button
+                                          disabled={
+                                            isTyping ||
+                                            loading ||
+                                            !isLastMessage
+                                          }
+                                          onClick={handleComapreMessaage}
+                                          className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-md"
+                                        >
+                                          Compare
+                                        </Button>
+                                      )}
+                                  </div>
+                                </>
+                              )}
                               {message?.suggestion && (
                                 <>
                                   <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
@@ -956,7 +1058,7 @@ export default function Component({ params }) {
                                       Product Found (based on Item number)
                                     </div>
                                   )}
-                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
+                                  <div className="relative grid grid-cols-auto sm:grid-cols-auto md:grid-cols-auto gap-2 p-1">
                                     {message?.compareInputValue?.item_number_match?.map(
                                       (product, index) => (
                                         <Card
@@ -1011,7 +1113,7 @@ export default function Component({ params }) {
                                     </div>
                                   )}
 
-                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-1">
+                                  <div className="relative grid grid-cols-auto sm:grid-cols-auto md:grid-cols-auto gap-4 p-1">
                                     {message?.compareInputValue?.product_suggest?.map(
                                       (category, catIndex) => (
                                         <div key={catIndex}>
@@ -1025,7 +1127,7 @@ export default function Component({ params }) {
                                             (product, valIndex) => (
                                               <Card
                                                 key={valIndex}
-                                                className="mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                                className="flex mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
                                               >
                                                 <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
                                                   <div className="flex justify-between items-start">
