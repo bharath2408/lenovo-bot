@@ -367,7 +367,7 @@ export default function Component({ params }) {
                     compareInputValue: {
                       item_number_match:
                         result?.comparison?.item_number_match || [],
-                      product_suggest: [uniqueProductList] || [],
+                      product_suggest: uniqueProductList || [],
                       product_label:
                         result?.comparison?.product_name_match?.flatMap(
                           (match) => Object.keys(match).flat()
