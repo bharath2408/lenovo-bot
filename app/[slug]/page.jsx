@@ -248,6 +248,7 @@ export default function Component({ params }) {
   };
 
   const handleTypeMessage = async (usertext) => {
+    if (usertext.trim() === "") return;
     const newUserMessage = {
       text: usertext,
       isBot: false,
@@ -344,10 +345,13 @@ export default function Component({ params }) {
                 setLoading(false);
                 clearInterval(typingInterval);
                 setIsTyping(false);
-                const itemNumbers =
-                  result?.comparison?.item_number_match?.map(
-                    (item) => item.item_number
-                  ) || [];
+                const itemNumbers = Array.from(
+                  new Set(
+                    result?.comparison?.item_number_match?.map(
+                      (item) => item.item_number
+                    ) || []
+                  )
+                );
                 setSelectedItems(itemNumbers);
                 const uniqueProducts =
                   result?.comparison?.product_name_match?.flatMap((match) => {
@@ -530,8 +534,10 @@ export default function Component({ params }) {
         // If it's selected, remove it from the selected items list
         return prevSelectedItems.filter((item) => item !== itemNumber);
       } else {
-        // If it's not selected, add it to the selected items list
-        return [...prevSelectedItems, itemNumber];
+        // If it's not selected and not already in the list, add it
+        return prevSelectedItems.includes(itemNumber)
+          ? prevSelectedItems // Prevent duplicate
+          : [...prevSelectedItems, itemNumber];
       }
     });
   };
@@ -559,11 +565,19 @@ export default function Component({ params }) {
     if (questionNumber === 1) {
       const selectedItemsString = selectedItems.join(", ");
       const slug = params?.slug || "";
-      const resultString = `${selectedItemsString}, ${slug}`;
+
+      // Create a Set to ensure uniqueness
+      const uniqueItems = new Set(
+        [...selectedItemsString.split(", "), slug].filter(Boolean)
+      );
+
+      // Join the unique values back into a string
+      const resultString = Array.from(uniqueItems).join(", ");
       fetchComapare(resultString);
     } else if (questionNumber === 2) {
-      const selectedItemsString = selectedItems.join(", ");
-      fetchComapare(selectedItemsString);
+      const uniqueSelectedItems = [...new Set(selectedItems)]; // Remove duplicates
+      const selectedItemsString = uniqueSelectedItems.join(", "); // Create a string from unique items
+      fetchCompare(selectedItemsString);
     }
   };
 
@@ -1058,7 +1072,7 @@ export default function Component({ params }) {
                                       Product Found (based on Item number)
                                     </div>
                                   )}
-                                  <div className="relative grid grid-cols-auto sm:grid-cols-auto md:grid-cols-auto gap-2 p-1">
+                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
                                     {message?.compareInputValue?.item_number_match?.map(
                                       (product, index) => (
                                         <Card
@@ -1089,9 +1103,12 @@ export default function Component({ params }) {
                                           </CardHeader>
                                           <CardContent className="p-2 flex-grow">
                                             <div className="flex items-center justify-between px-2 mb-2">
-                                              <CardDescription className="flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                <Tag className="w-4 h-4 mr-2 text-blue-500" />
-                                                Item No: {product.item_number}
+                                              <CardDescription className="flex uppercase items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                <Tag className="w-4 h-4 mr-2  text-blue-500" />
+                                                <span className="capitalize">
+                                                  Item No :{" "}
+                                                </span>
+                                                {product.item_number}
                                               </CardDescription>
                                               <Link
                                                 href={`/${product.item_number}`}
@@ -1113,7 +1130,7 @@ export default function Component({ params }) {
                                     </div>
                                   )}
 
-                                  <div className="relative grid grid-cols-auto sm:grid-cols-auto md:grid-cols-auto gap-4 p-1">
+                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-1">
                                     {message?.compareInputValue?.product_suggest?.map(
                                       (category, catIndex) => (
                                         <div key={catIndex}>
@@ -1154,9 +1171,11 @@ export default function Component({ params }) {
 
                                                 <CardContent className="p-2 flex-grow">
                                                   <div className="px-2 mb-2">
-                                                    <CardDescription className="flex items-center justify-start text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                    <CardDescription className="flex uppercase items-center justify-start text-sm font-medium text-gray-600 dark:text-gray-300">
                                                       <Tag className="w-4 h-4 mr-2 text-blue-500" />
-                                                      Item No:{" "}
+                                                      <span className="capitalize">
+                                                        Item No :{" "}
+                                                      </span>
                                                       {product.item_number}
                                                     </CardDescription>
                                                     <div className="mb-4">
@@ -1175,7 +1194,9 @@ export default function Component({ params }) {
                                                             : "line-clamp-3"
                                                         }`}
                                                       >
-                                                        {product?.overview}
+                                                        {capitalizeFirstLetter(
+                                                          product?.overview
+                                                        )}
                                                       </p>
                                                       {/* {product?.overview
                                                         ?.length > 150 && (
