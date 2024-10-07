@@ -3,6 +3,16 @@ import ChatbotBubble from "@/components/ChatbotBubble";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -19,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   HoverCard,
   HoverCardContent,
@@ -38,6 +49,7 @@ import {
   ArrowUp,
   BotMessageSquare,
   CalendarIcon,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -51,6 +63,7 @@ import {
   Maximize2,
   MessageCircle,
   Minimize2,
+  MinusCircle,
   Send,
   ShoppingCart,
   Shrink,
@@ -59,6 +72,7 @@ import {
   Tag,
   TruckIcon,
   X,
+  XCircle,
 } from "lucide-react";
 import Head from "next/head";
 import Image from "next/image";
@@ -87,7 +101,10 @@ export default function Component({ params }) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [botExpand, setBotExpand] = useState(false);
+  const [expandedItems, setExpandedItems] = useState([]);
   const [quantity, setQuantity] = useState(1);
+  const [question1Answer, setQuestion1Answer] = useState("");
+  const [question2Answer, setQuestion2Answer] = useState("");
   const [messages, setMessages] = useState([
     {
       text: "Welcome to our customer service chat. How may I assist you today?",
@@ -169,38 +186,28 @@ export default function Component({ params }) {
     try {
       // Make the POST request using axios
       const response = await axios.post(
-        "https://f2zrmrxfe7.execute-api.us-east-1.amazonaws.com/lang_graph/LangGraph",
+        "https://langgraph.azurewebsites.net/chatbot",
         {
-          payload: {
-            part_number: { current_product: params?.slug },
-            messages: params?.slug,
-          },
+          part_number: { current_product: params?.slug },
+          messages: params?.slug,
         }
       );
 
       if (response.status === 200) {
-        const parsedResponse = JSON.parse(response.data?.body);
-        let outputString = parsedResponse.output;
-
-        // Step 2: Replace single quotes with double quotes to make it valid JSON
-        outputString = outputString.replace(/'/g, '"');
-
-        outputString = outputString.replace(/HumanMessage\(.*?\)/g, "");
-
-        outputString = outputString.replace(/\"s/g, "'s");
+        const parsedResponse = JSON.parse(response.data);
 
         let result;
 
-        result = JSON.parse(outputString);
+        result = parsedResponse;
 
         // Step 4: Extract the FAQs
-        const faqs = result?.faqs || [];
+        const faqs = result?.faqs?.faqs || [];
         // Set the button data from the response
         // Assuming the API returns `faqs` in the response data
 
         const filteredQuestions = faqs?.filter(
-          (q) => q.question.toLowerCase() === question.toLowerCase()
-        )?.[0]?.answer;
+          (q) => q.questions.toLowerCase() === question.toLowerCase()
+        )?.[0]?.answers;
 
         if (filteredQuestions) {
           let index = 0;
@@ -256,23 +263,22 @@ export default function Component({ params }) {
     try {
       // Make the POST request using axios
       const response = await axios.post(
-        "https://f2zrmrxfe7.execute-api.us-east-1.amazonaws.com/lang_graph/LangGraph",
+        "https://langgraph.azurewebsites.net/chatbot",
         {
-          payload: {
-            part_number: { current_product: params?.slug },
-            messages: usertext,
-          },
+          part_number: { current_product: params?.slug },
+          messages: usertext,
         }
       );
 
       if (response.status === 200) {
-        const parsedResponse = JSON.parse(response.data?.body);
+        const parsedResponse = JSON.parse(response.data);
+
+        console.log(parsedResponse);
+
         if (parsedResponse.status === "error") {
-          let outputString = parsedResponse.output;
+          let outputString = parsedResponse;
 
           // Step 2: Replace single quotes with double quotes to make it valid JSON
-          outputString = outputString.replace(/'/g, '"');
-
           if (outputString) {
             let index = 0;
             const typingInterval = setInterval(() => {
@@ -303,23 +309,30 @@ export default function Component({ params }) {
             }, 40);
           }
         } else {
-          let outputString = parsedResponse.output;
+          let outputString = parsedResponse;
 
           // Step 2: Replace single quotes with double quotes to make it valid JSON
-          outputString = outputString.replace(/'/g, '"');
-
-          outputString = outputString.replace(/HumanMessage\(.*?\)/g, "");
 
           let result;
 
-          result = JSON.parse(outputString);
+          result = outputString;
 
-          if (result?.question || result?.suggestion) {
+          if (
+            result?.questions ||
+            result?.suggestion ||
+            result?.other ||
+            result?.comparison
+          ) {
             let index = 0;
             const typingInterval = setInterval(() => {
-              if (index < result?.question?.length) {
+              if (
+                index < result?.questions?.length ||
+                index < result?.other?.length
+              ) {
                 setLoading(false);
-                const currentChar = result?.question?.charAt(index);
+                const currentChar =
+                  result?.questions?.charAt(index) ||
+                  result?.other?.charAt(index);
                 setCurrentTypingText((prev) => {
                   const updatedText = prev + currentChar;
                   return updatedText;
@@ -330,11 +343,36 @@ export default function Component({ params }) {
                 setLoading(false);
                 clearInterval(typingInterval);
                 setIsTyping(false);
+                const itemNumbers =
+                  result?.comparison?.item_number_match?.map(
+                    (item) => item.item_number
+                  ) || [];
+                setSelectedItems(itemNumbers);
+                const uniqueProducts =
+                  result?.comparison?.product_name_match?.flatMap((match) => {
+                    return Object.entries(match).map(([key, value]) => ({
+                      key,
+                      value,
+                    }));
+                  }) || [];
+                const uniqueProductList = uniqueProducts.filter(
+                  (product, index, self) =>
+                    index === self.findIndex((p) => p.key === product.key)
+                );
                 setMessages((prevMessages) => [
                   ...prevMessages,
                   {
-                    text: result?.question,
-                    suggestion: result?.suggestion,
+                    text: result?.questions || result?.other || "",
+                    suggestion: result?.suggestion || [],
+                    compareInputValue: {
+                      item_number_match:
+                        result?.comparison?.item_number_match || [],
+                      product_suggest: [uniqueProductList] || [],
+                      product_label:
+                        result?.comparison?.product_name_match?.flatMap(
+                          (match) => Object.keys(match).flat()
+                        ) || [],
+                    },
                     isBot: true,
                     id: Date.now(),
                   },
@@ -380,32 +418,27 @@ export default function Component({ params }) {
       try {
         // Make the POST request using axios
         const response = await axios.post(
-          "https://f2zrmrxfe7.execute-api.us-east-1.amazonaws.com/lang_graph/LangGraph",
+          "https://langgraph.azurewebsites.net/chatbot",
           {
-            payload: {
-              part_number: { current_product: params?.slug },
-              messages: params?.slug,
-            },
+            part_number: { current_product: params?.slug },
+            messages: params?.slug,
           }
         );
 
         if (response.status === 200) {
-          const parsedResponse = JSON.parse(response.data?.body);
-          let outputString = parsedResponse.output;
+          let parsedResponse = JSON.parse(response.data);
+
+          console.log(parsedResponse);
 
           // Step 2: Replace single quotes with double quotes to make it valid JSON
-          outputString = outputString.replace(/'/g, '"');
+          // parsedResponse = parsedResponse.replace(/'/g, '"');
 
-          outputString = outputString.replace(/HumanMessage\(.*?\)/g, "");
+          // parsedResponse = parsedResponse.replace(/HumanMessage\(.*?\)/g, "");
 
-          outputString = outputString.replace(/\"s/g, "'s");
-
-          let result;
-
-          result = JSON.parse(outputString);
+          // parsedResponse = parsedResponse.replace(/\"s/g, "'s");
 
           // Step 4: Extract the FAQs
-          const faqs = result?.faqs || [];
+          const faqs = parsedResponse?.faqs?.faqs || [];
           // Set the button data from the response
           setButtons(faqs); // Assuming the API returns `faqs` in the response data
         }
@@ -416,6 +449,42 @@ export default function Component({ params }) {
 
     fetchStream();
   }, [params?.slug]);
+
+  const fetchComapare = async (selectedItemsString) => {
+    try {
+      setIsTyping(true);
+      setLoading(true);
+      // Make the POST request using axios
+      const response = await axios.post(
+        "https://langgraph.azurewebsites.net/chatbot",
+        {
+          part_number: { current_product: params?.slug },
+          messages: "compare " + selectedItemsString,
+        }
+      );
+
+      if (response.status === 200) {
+        let parsedResponse = JSON.parse(response.data);
+
+        const typingInterval = setInterval(() => {
+          setLoading(false);
+          clearInterval(typingInterval);
+          setIsTyping(false);
+          setBotExpand(true);
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            {
+              compare: parsedResponse?.comparison?.compare_data,
+              isBot: true,
+              id: Date.now(),
+            },
+          ]);
+        }, 40);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
   // useEffect(() => {
   //   // Initialize the chatbot loader after the page has loaded
@@ -445,6 +514,75 @@ export default function Component({ params }) {
   if (!productDetails) {
     return <div>Loading...</div>; // Show a loading state while data is being fetched
   }
+
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  const handleCheckboxChange = (itemNumber) => {
+    setSelectedItems((prevSelectedItems) => {
+      // Check if the item is already selected
+      if (prevSelectedItems.includes(itemNumber)) {
+        // If it's selected, remove it from the selected items list
+        return prevSelectedItems.filter((item) => item !== itemNumber);
+      } else {
+        // If it's not selected, add it to the selected items list
+        return [...prevSelectedItems, itemNumber];
+      }
+    });
+  };
+
+  const renderValue = (value) => {
+    if (value?.toLowerCase() === "yes") {
+      return <CheckCircle2 className="text-green-500" />;
+    } else if (value?.toLowerCase() === "no") {
+      return <XCircle className="text-red-500" />;
+    } else if (value?.toLowerCase() === "not available") {
+      return <MinusCircle className="text-gray-500" />;
+    } else {
+      return value;
+    }
+  };
+
+  const handleExpandToggle = (index) => {
+    setExpandedItems((prevExpandedItems) => ({
+      ...prevExpandedItems,
+      [index]: !prevExpandedItems[index], // Toggle the current item's expanded state
+    }));
+  };
+
+  const handleQuestionAnswer = (questionNumber, answer) => {
+    if (questionNumber === 1) {
+      const selectedItemsString = selectedItems.join(", ");
+      const slug = params?.slug || "";
+      const resultString = `${selectedItemsString}, ${slug}`;
+      fetchComapare(resultString);
+    } else if (questionNumber === 2) {
+      const selectedItemsString = selectedItems.join(", ");
+      fetchComapare(selectedItemsString);
+    }
+  };
+
+  const handleComapreMessaage = () => {
+    const newUserMessage = {
+      compareQuestion: "Would you like to compare with this current product?",
+      isBot: true,
+      id: Date.now(),
+    };
+
+    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+  };
+
+  function formatString(input) {
+    return input
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first char of each word
+      .join(" ");
+  }
+
+  console.log(messages);
+
+  const capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
 
   return (
     <>
@@ -600,7 +738,7 @@ export default function Component({ params }) {
                                     : ""
                                 }`}
                               >
-                                <Image
+                                <img
                                   src={image}
                                   alt={`Product thumbnail ${index + 1}`}
                                   width={80}
@@ -649,7 +787,7 @@ export default function Component({ params }) {
                   <motion.div
                     initial={{ height: 300 }}
                     animate={{
-                      height: botExpand ? 400 : 300,
+                      height: botExpand ? 500 : 300,
                     }}
                     transition={{ duration: 0.5 }} // You can adjust the duration here
                     className={clsx(
@@ -657,129 +795,460 @@ export default function Component({ params }) {
                     )}
                     ref={scrollAreaRef}
                   >
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.isBot ? "justify-start" : "justify-end"
-                        } mb-4`}
-                      >
+                    {messages.map((message, index) => {
+                      const isLastMessage = index === messages.length - 1;
+                      return (
                         <div
-                          className={`flex items-start ${
-                            message.isBot ? "flex-row" : "flex-row-reverse"
-                          }`}
+                          key={message.id}
+                          className={`flex ${
+                            message.isBot ? "justify-start" : "justify-end"
+                          } mb-4`}
                         >
-                          <Avatar
-                            className={`w-8 h-8 ${
-                              message.isBot ? "mr-2" : "ml-2"
+                          <div
+                            className={`flex items-start ${
+                              message.isBot ? "flex-row" : "flex-row-reverse"
                             }`}
                           >
-                            <AvatarImage
-                              src={
-                                message.isBot
-                                  ? "/placeholder.svg?height=32&width=32"
-                                  : "/placeholder.svg?height=32&width=32"
-                              }
-                            />
-                            <AvatarFallback
-                              className={clsx(
-                                "text-sm",
-                                message.isBot
-                                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                                  : ""
-                              )}
+                            <Avatar
+                              className={`w-8 h-8 ${
+                                message.isBot ? "mr-2" : "ml-2"
+                              }`}
                             >
-                              {message.isBot ? "AI" : "You"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div
-                            className={`px-4 py-2 rounded-lg ${
-                              message.isBot
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
-                                : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
-                            } shadow-md`}
-                          >
-                            {message?.text}
-                            {message?.suggestion && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
-                                {message?.suggestion?.map((product, index) => (
-                                  <Card className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
-                                    <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
-                                      <div className="flex justify-between items-start">
-                                        <CardTitle className="text-sm font-bold text-white truncate max-w-full">
-                                          {product.name
-                                            .charAt(0)
-                                            .toUpperCase() +
-                                            product.name.slice(1)}
-                                        </CardTitle>
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent className="p-2 flex-grow">
-                                      <div className="flex items-center mb-2">
-                                        <Tag className="w-4 h-4 mr-2 text-blue-500" />
-                                        <CardDescription className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                          Item No: {product.item_number}
-                                        </CardDescription>
-                                      </div>
-                                      <div className="mb-4">
-                                        <div className="flex items-center mb-1">
-                                          <Info className="w-4 h-4 mr-2 text-blue-500" />
-                                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                            Overview
-                                          </h3>
+                              <AvatarImage
+                                src={
+                                  message.isBot
+                                    ? "/placeholder.svg?height=32&width=32"
+                                    : "/placeholder.svg?height=32&width=32"
+                                }
+                              />
+                              <AvatarFallback
+                                className={clsx(
+                                  "text-sm",
+                                  message.isBot
+                                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                                    : ""
+                                )}
+                              >
+                                {message.isBot ? "AI" : "You"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div
+                              className={`px-4 py-2 rounded-lg ${
+                                message.isBot
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+                                  : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
+                              } shadow-md`}
+                            >
+                              {message?.text}
+                              {message?.suggestion && (
+                                <>
+                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
+                                    {message?.suggestion?.map(
+                                      (product, index) => (
+                                        <Card
+                                          key={index}
+                                          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                        >
+                                          <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                                            <div className="flex justify-between items-start">
+                                              <CardTitle className="text-sm font-bold text-white truncate max-w-full">
+                                                {product.name
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                                  product.name.slice(1)}
+                                              </CardTitle>
+                                              <Checkbox
+                                                disabled={!isLastMessage}
+                                                checked={selectedItems.includes(
+                                                  product.item_number
+                                                )}
+                                                onCheckedChange={() =>
+                                                  handleCheckboxChange(
+                                                    product.item_number
+                                                  )
+                                                }
+                                                className="h-5 w-5 border-white bg-white text-white"
+                                              />
+                                            </div>
+                                          </CardHeader>
+                                          <CardContent className="p-2 flex-grow">
+                                            <div className="flex items-center mb-2">
+                                              <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                                              <CardDescription className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                Item No: {product.item_number}
+                                              </CardDescription>
+                                            </div>
+                                            <div className="mb-4">
+                                              <div className="flex items-center mb-1">
+                                                <Info className="w-4 h-4 mr-2 text-blue-500" />
+                                                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                  Overview
+                                                </h3>
+                                              </div>
+                                              <p
+                                                className={`text-sm text-gray-700 dark:text-gray-200 ${
+                                                  expandedItems[index]
+                                                    ? ""
+                                                    : "line-clamp-3"
+                                                }`}
+                                              >
+                                                {product?.overview}
+                                              </p>
+                                              {product?.overview?.length >
+                                                150 && (
+                                                <Button
+                                                  variant="link"
+                                                  onClick={() =>
+                                                    handleExpandToggle(index)
+                                                  }
+                                                  className="mt-1 p-0 h-auto text-blue-500 hover:text-blue-700"
+                                                >
+                                                  {expandedItems[index]
+                                                    ? "Show less"
+                                                    : "Show more"}
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </CardContent>
+                                          <CardFooter className="p-1 bg-gray-50 dark:bg-gray-700">
+                                            <Button
+                                              asChild
+                                              variant="ghost"
+                                              className="w-full justify-between hover:bg-blue-100 dark:hover:bg-blue-900"
+                                            >
+                                              <Link
+                                                href={`/${product.item_number}`}
+                                                target="_blank"
+                                                className="flex items-center"
+                                              >
+                                                <span>View Details</span>
+                                                <ExternalLink className="w-4 h-4 ml-2" />
+                                              </Link>
+                                            </Button>
+                                          </CardFooter>
+                                        </Card>
+                                      )
+                                    )}
+                                  </div>
+                                  <div className="px-2 flex items-center justify-end">
+                                    {message?.suggestion?.length > 0 &&
+                                      selectedItems.length > 0 && (
+                                        <Button
+                                          disabled={
+                                            isTyping ||
+                                            loading ||
+                                            !isLastMessage
+                                          }
+                                          onClick={handleComapreMessaage}
+                                          className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-md"
+                                        >
+                                          Compare
+                                        </Button>
+                                      )}
+                                  </div>
+                                </>
+                              )}
+                              {message?.compareInputValue && (
+                                <>
+                                  {message?.compareInputValue?.item_number_match
+                                    .length > 0 && (
+                                    <div className="px-1">
+                                      Product Found (based on Item number)
+                                    </div>
+                                  )}
+                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
+                                    {message?.compareInputValue?.item_number_match?.map(
+                                      (product, index) => (
+                                        <Card
+                                          key={index}
+                                          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                        >
+                                          <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                                            <div className="flex justify-between items-start">
+                                              <CardTitle className="text-sm font-bold text-white truncate max-w-full">
+                                                {product.title
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                                  product.title.slice(1)}
+                                              </CardTitle>
+                                              <Checkbox
+                                                disabled={!isLastMessage}
+                                                checked={selectedItems.includes(
+                                                  product.item_number
+                                                )}
+                                                onCheckedChange={() =>
+                                                  handleCheckboxChange(
+                                                    product.item_number
+                                                  )
+                                                }
+                                                className="h-5 w-5 ml-3 border-white bg-white text-white"
+                                              />
+                                            </div>
+                                          </CardHeader>
+                                          <CardContent className="p-2 flex-grow">
+                                            <div className="flex items-center justify-between px-2 mb-2">
+                                              <CardDescription className="flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                                                Item No: {product.item_number}
+                                              </CardDescription>
+                                              <Link
+                                                href={`/${product.item_number}`}
+                                                target="_blank"
+                                                className="flex items-center justify-end"
+                                              >
+                                                <ExternalLink className="w-4 h-4 ml-2" />
+                                              </Link>
+                                            </div>
+                                          </CardContent>
+                                        </Card>
+                                      )
+                                    )}
+                                  </div>
+                                  {message?.compareInputValue?.product_suggest
+                                    .length > 0 && (
+                                    <div className="px-1">
+                                      Product Found (based on Product name)
+                                    </div>
+                                  )}
+
+                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-1">
+                                    {message?.compareInputValue?.product_suggest?.map(
+                                      (category, catIndex) => (
+                                        <div key={catIndex}>
+                                          {/* Displaying the key as the header */}
+                                          <h2 className="text-xl font-bold text-gray-800 dark:text-white my-4">
+                                            {category.key}
+                                          </h2>
+
+                                          {/* Mapping over the value array */}
+                                          {category?.value?.map(
+                                            (product, valIndex) => (
+                                              <Card
+                                                key={valIndex}
+                                                className="mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                              >
+                                                <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                                                  <div className="flex justify-between items-start">
+                                                    <CardTitle className="text-sm font-bold text-white truncate max-w-full">
+                                                      {product?.name
+                                                        .charAt(0)
+                                                        .toUpperCase() +
+                                                        product?.name.slice(1)}
+                                                    </CardTitle>
+                                                    <Checkbox
+                                                      disabled={!isLastMessage}
+                                                      checked={selectedItems.includes(
+                                                        product?.item_number
+                                                      )}
+                                                      onCheckedChange={() =>
+                                                        handleCheckboxChange(
+                                                          product?.item_number
+                                                        )
+                                                      }
+                                                      className="h-5 w-5 ml-3 border-white bg-white text-white"
+                                                    />
+                                                  </div>
+                                                </CardHeader>
+
+                                                <CardContent className="p-2 flex-grow">
+                                                  <div className="px-2 mb-2">
+                                                    <CardDescription className="flex items-center justify-start text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                      <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                                                      Item No:{" "}
+                                                      {product.item_number}
+                                                    </CardDescription>
+                                                    <div className="mb-4">
+                                                      <div className="flex items-center mb-1">
+                                                        <Info className="w-4 h-4 mr-2 text-blue-500" />
+                                                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                          Overview
+                                                        </h3>
+                                                      </div>
+                                                      <p
+                                                        className={`text-sm text-gray-700 dark:text-gray-200 ${
+                                                          expandedItems[
+                                                            valIndex
+                                                          ]
+                                                            ? ""
+                                                            : "line-clamp-3"
+                                                        }`}
+                                                      >
+                                                        {product?.overview}
+                                                      </p>
+                                                      {/* {product?.overview
+                                                        ?.length > 150 && (
+                                                        <Button
+                                                          variant="link"
+                                                          onClick={() =>
+                                                            handleExpandToggle(
+                                                              valIndex
+                                                            )
+                                                          }
+                                                          className="mt-1 p-0 h-auto text-blue-500 hover:text-blue-700"
+                                                        >
+                                                          {expandedItems[
+                                                            valIndex
+                                                          ]
+                                                            ? "Show less"
+                                                            : "Show more"}
+                                                        </Button>
+                                                      )} */}
+                                                    </div>
+                                                    <Link
+                                                      href={`/${product.item_number}`}
+                                                      target="_blank"
+                                                      className="flex items-center justify-end"
+                                                    >
+                                                      <ExternalLink className="w-4 h-4 ml-2" />
+                                                    </Link>
+                                                  </div>
+                                                </CardContent>
+                                              </Card>
+                                            )
+                                          )}
                                         </div>
-                                        <p
-                                          className={`text-sm text-gray-700 dark:text-gray-200 ${
-                                            isExpanded ? "" : "line-clamp-3"
-                                          }`}
+                                      )
+                                    )}
+                                  </div>
+                                  <div className="px-2 flex items-center justify-end">
+                                    {(message?.compareInputValue
+                                      ?.item_number_match.length > 0 ||
+                                      message?.compareInputValue
+                                        ?.product_suggest.length > 0) &&
+                                      selectedItems.length > 0 && (
+                                        <Button
+                                          disabled={
+                                            isTyping ||
+                                            loading ||
+                                            !isLastMessage
+                                          }
+                                          onClick={handleComapreMessaage}
+                                          className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-md"
                                         >
-                                          {product?.overview}
-                                        </p>
-                                        {product?.overview?.length > 150 && (
-                                          <Button
-                                            variant="link"
-                                            onClick={() =>
-                                              setIsExpanded(!isExpanded)
-                                            }
-                                            className="mt-1 p-0 h-auto text-blue-500 hover:text-blue-700"
-                                          >
-                                            {isExpanded
-                                              ? "Show less"
-                                              : "Show more"}
-                                          </Button>
-                                        )}
-                                      </div>
-                                    </CardContent>
-                                    <CardFooter className="p-1 bg-gray-50 dark:bg-gray-700">
+                                          Compare
+                                        </Button>
+                                      )}
+                                  </div>
+                                </>
+                              )}
+                              {message?.compareQuestion && (
+                                <div className="w-[402px] text-center m-auto bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
+                                  <div>
+                                    <h3 className="text-sm font-semibold mb-2">
+                                      {message?.compareQuestion}
+                                    </h3>
+                                    <div className="flex justify-center space-x-2">
                                       <Button
-                                        asChild
-                                        variant="ghost"
-                                        className="w-full justify-between hover:bg-blue-100 dark:hover:bg-blue-900"
+                                        disabled={
+                                          isTyping || loading || !isLastMessage
+                                        }
+                                        className={`bg-white hover:text-blue-500 hover:bg-white ${
+                                          question1Answer === "yes"
+                                            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:text-white hover:bg-white"
+                                            : "bg-white text-blue-500"
+                                        }`}
+                                        onClick={() =>
+                                          handleQuestionAnswer(1, "yes")
+                                        }
                                       >
-                                        <Link
-                                          href={`/${product.item_number}`}
-                                          target="_blank"
-                                          className="flex items-center"
-                                        >
-                                          <span>View Details</span>
-                                          <ExternalLink className="w-4 h-4 ml-2" />
-                                        </Link>
+                                        Yes
                                       </Button>
-                                    </CardFooter>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
+                                      <Button
+                                        variant="outline"
+                                        className={`bg-white hover:text-blue-500 hover:bg-white ${
+                                          question1Answer === "no"
+                                            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:text-white hover:bg-white"
+                                            : "bg-white text-blue-500"
+                                        }`}
+                                        disabled={
+                                          isTyping || loading || !isLastMessage
+                                        }
+                                        onClick={() =>
+                                          handleQuestionAnswer(2, "no")
+                                        }
+                                      >
+                                        No
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {message?.compare && (
+                                <Card className="w-full max-w-6xl mx-auto">
+                                  <CardHeader className="">
+                                    <CardTitle className="text-2xl font-bold text-start mb-4">
+                                      Product Comparison
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <ScrollArea className="h-[600px] overflow-x-auto">
+                                      <Table>
+                                        <TableHeader className="">
+                                          <TableRow>
+                                            <TableHead className="text-md text-black font-bold">
+                                              Feature
+                                            </TableHead>
+                                            {Object.keys(
+                                              message?.compare?.products
+                                            )?.map((productKey) => (
+                                              <TableHead
+                                                key={productKey}
+                                                className="text-md text-black font-bold"
+                                              >
+                                                {capitalizeFirstLetter(
+                                                  message?.compare?.products[
+                                                    productKey
+                                                  ]
+                                                )}
+                                              </TableHead>
+                                            ))}
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {message?.compare?.differences.map(
+                                            (diff, index) => (
+                                              <TableRow
+                                                key={index}
+                                                className={
+                                                  index % 2 === 0
+                                                    ? "bg-muted/50"
+                                                    : ""
+                                                }
+                                              >
+                                                <TableCell className="font-semibold">
+                                                  {formatString(
+                                                    diff.field_name
+                                                  )}
+                                                </TableCell>
+                                                {Object.keys(
+                                                  message?.compare?.products
+                                                ).map((productKey) => (
+                                                  <TableCell key={productKey}>
+                                                    {renderValue(
+                                                      diff.values[productKey]
+                                                    )}
+                                                  </TableCell>
+                                                ))}
+                                              </TableRow>
+                                            )
+                                          )}
+                                        </TableBody>
+                                      </Table>
+                                    </ScrollArea>
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {isTyping && (
                       <div className="flex justify-start mb-4">
                         <div className="flex items-start">
                           <Avatar className="w-8 h-8 mr-2">
                             <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                            <AvatarFallback className="text-sm bg-[#d40029] text-white">
+                            <AvatarFallback className="text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                               AI
                             </AvatarFallback>
                           </Avatar>
@@ -803,11 +1272,11 @@ export default function Component({ params }) {
                         disabled={loading || isTyping}
                         size="sm"
                         onClick={() =>
-                          handleSendMessage(btn?.id, btn?.question)
+                          handleSendMessage(btn?.id, btn?.questions)
                         }
                         className="border-blue-300 text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-all duration-300 transform hover:scale-105"
                       >
-                        {btn?.question}
+                        {btn?.questions}
                       </Button>
                     ))}
                   </div>
