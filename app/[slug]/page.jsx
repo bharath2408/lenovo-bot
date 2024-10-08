@@ -190,6 +190,7 @@ export default function Component({ params }) {
         {
           part_number: { current_product: params?.slug },
           messages: params?.slug,
+          tag: "message",
         }
       );
 
@@ -268,6 +269,7 @@ export default function Component({ params }) {
         {
           part_number: { current_product: params?.slug },
           messages: usertext,
+          tag: "message",
         }
       );
 
@@ -434,6 +436,7 @@ export default function Component({ params }) {
           {
             part_number: { current_product: params?.slug },
             messages: params?.slug,
+            tag: "message",
           }
         );
 
@@ -472,6 +475,7 @@ export default function Component({ params }) {
         {
           part_number: { current_product: params?.slug },
           messages: "compare " + selectedItemsString,
+          tag: "message",
         }
       );
 
