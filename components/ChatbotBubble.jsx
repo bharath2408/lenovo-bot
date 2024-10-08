@@ -82,7 +82,7 @@ export default function ChatbotBubble() {
                 <>
                   <iframe
                     className="drag-handle"
-                    src="https://d7xzwy4q8c7yd.cloudfront.net/index.html"
+                    src="https://dpl3ywah43k9q.cloudfront.net/index.html"
                     width="100%"
                     height="100%"
                     frameBorder="0"

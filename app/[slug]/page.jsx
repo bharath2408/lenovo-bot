@@ -58,6 +58,7 @@ import {
   Expand,
   ExternalLink,
   Heart,
+  ImageIcon,
   Info,
   MapPinIcon,
   Maximize2,
@@ -105,6 +106,7 @@ export default function Component({ params }) {
   const [quantity, setQuantity] = useState(1);
   const [question1Answer, setQuestion1Answer] = useState("");
   const [question2Answer, setQuestion2Answer] = useState("");
+  const [imageBase64, setImageBase64] = useState();
   const [messages, setMessages] = useState([
     {
       text: "Welcome to our customer service chat. How may I assist you today?",
@@ -157,6 +159,7 @@ export default function Component({ params }) {
   const [currentTypingText, setCurrentTypingText] = useState("");
   const scrollAreaRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -252,10 +255,11 @@ export default function Component({ params }) {
     if (usertext.trim() === "") return;
     const newUserMessage = {
       text: usertext,
+      image: imageBase64 ? imageBase64 : null,
       isBot: false,
       id: Date.now(),
     };
-
+    setImageBase64(null);
     setMessages((prevMessages) => [...prevMessages, newUserMessage]);
     setInputText("");
     setIsTyping(true);
@@ -268,8 +272,10 @@ export default function Component({ params }) {
         "https://langgraph.azurewebsites.net/chatbot",
         {
           part_number: { current_product: params?.slug },
-          messages: usertext,
-          tag: "message",
+          messages: imageBase64
+            ? { text: usertext, image: imageBase64, name: "ashjdghadf" }
+            : usertext,
+          tag: imageBase64 ? "image" : "message",
         }
       );
 
@@ -610,6 +616,32 @@ export default function Component({ params }) {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result;
+        setImageBase64(base64);
+
+        // Reset the input field after the upload
+        e.target.value = null;
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageBase64(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  console.log(imageBase64);
+
   return (
     <>
       <div className="min-w-screen min-h-screen mt-[7%] p-4">
@@ -865,6 +897,13 @@ export default function Component({ params }) {
                                   : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
                               } shadow-md`}
                             >
+                              {message?.image && (
+                                <img
+                                  src={message.image}
+                                  alt="Product Image"
+                                  className="w-full rounded-lg h-auto mb-2"
+                                />
+                              )}
                               {message?.text}
                               {message?.accessories?.length > 0 && (
                                 <>
@@ -1407,8 +1446,28 @@ export default function Component({ params }) {
                       e.preventDefault();
                       handleTypeMessage(inputText);
                     }}
-                    className="flex space-x-2"
+                    className="flex space-x-2 relative"
                   >
+                    {imageBase64 && (
+                      <div className="shadow-md rounded-lg absolute -top-14 left-0 z-10">
+                        <div className="relative">
+                          <img
+                            src={imageBase64}
+                            alt="Selected image"
+                            className="w-14 h-14 rounded-lg object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={handleRemoveImage}
+                            className="absolute -top-2 -right-2 rounded-full w-5 h-5 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <Input
                       type="text"
                       placeholder="Type your message here..."
@@ -1416,6 +1475,22 @@ export default function Component({ params }) {
                       onChange={(e) => setInputText(e.target.value)}
                       className="flex-grow border-gray-300 focus:border-gray-300 focus:ring-gray-300 dark:border-blue-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
                     />
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        ref={fileInputRef}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition-all duration-300 transform hover:scale-105"
+                      >
+                        <ImageIcon className="h-5 w-5" />
+                      </Button>
+                    </div>
                     <Button
                       type="submit"
                       disabled={loading || isTyping}
