@@ -938,22 +938,6 @@ export default function Component({ params }) {
                                       )
                                     )}
                                   </div>
-                                  <div className="px-2 flex items-center justify-end">
-                                    {message?.suggestion?.length > 0 &&
-                                      selectedItems.length > 0 && (
-                                        <Button
-                                          disabled={
-                                            isTyping ||
-                                            loading ||
-                                            !isLastMessage
-                                          }
-                                          onClick={handleComapreMessaage}
-                                          className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-md"
-                                        >
-                                          Compare
-                                        </Button>
-                                      )}
-                                  </div>
                                 </>
                               )}
                               {message?.suggestion && (
