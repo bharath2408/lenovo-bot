@@ -319,7 +319,7 @@ export default function Component({ params }) {
           result = outputString;
 
           if (
-            result?.questions ||
+            result?.question ||
             result?.suggestion ||
             result?.other ||
             result?.comparison ||
@@ -328,12 +328,12 @@ export default function Component({ params }) {
             let index = 0;
             const typingInterval = setInterval(() => {
               if (
-                index < result?.questions?.length ||
+                index < result?.question?.length ||
                 index < result?.other?.length
               ) {
                 setLoading(false);
                 const currentChar =
-                  result?.questions?.charAt(index) ||
+                  result?.question?.charAt(index) ||
                   result?.other?.charAt(index);
                 setCurrentTypingText((prev) => {
                   const updatedText = prev + currentChar;
@@ -360,6 +360,7 @@ export default function Component({ params }) {
                       value,
                     }));
                   }) || [];
+
                 const uniqueProductList = uniqueProducts.filter(
                   (product, index, self) =>
                     index === self.findIndex((p) => p.key === product.key)
@@ -367,7 +368,7 @@ export default function Component({ params }) {
                 setMessages((prevMessages) => [
                   ...prevMessages,
                   {
-                    text: result?.questions || result?.other || "",
+                    text: result?.question || result?.other || "",
                     suggestion: Array.isArray(result?.suggestion)
                       ? result.suggestion
                       : [],
@@ -383,6 +384,7 @@ export default function Component({ params }) {
                           (match) => Object.keys(match).flat()
                         ) || [],
                     },
+                    compare: result?.comparison?.compare_data,
                     isBot: true,
                     id: Date.now(),
                   },
@@ -709,7 +711,7 @@ export default function Component({ params }) {
                         <Heart className="mr-2 h-4 w-4" /> Save for Later
                       </Button>
                     </div>
-                    <p className="text-sm font-light tracking-wider text-gray-600 dark:text-gray-400">
+                    <p className="uppercase text-sm font-light tracking-wider text-gray-600 dark:text-gray-400">
                       Item # {productDetails?.[0]?.item_number}
                     </p>
                     <div className="flex items-center space-x-1">
@@ -860,7 +862,7 @@ export default function Component({ params }) {
                               } shadow-md`}
                             >
                               {message?.text}
-                              {message?.accessories && (
+                              {message?.accessories?.length > 0 && (
                                 <>
                                   <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
                                     {message?.accessories?.map(
@@ -940,7 +942,7 @@ export default function Component({ params }) {
                                   </div>
                                 </>
                               )}
-                              {message?.suggestion && (
+                              {message?.suggestion?.length > 0 && (
                                 <>
                                   <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
                                     {message?.suggestion?.map(
@@ -1056,133 +1058,141 @@ export default function Component({ params }) {
                                       Product Found (based on Item number)
                                     </div>
                                   )}
-                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
-                                    {message?.compareInputValue?.item_number_match?.map(
-                                      (product, index) => (
-                                        <Card
-                                          key={index}
-                                          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
-                                        >
-                                          <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
-                                            <div className="flex justify-between items-start">
-                                              <CardTitle className="text-sm font-bold text-white truncate max-w-full">
-                                                {product.title
-                                                  .charAt(0)
-                                                  .toUpperCase() +
-                                                  product.title.slice(1)}
-                                              </CardTitle>
-                                              <Checkbox
-                                                disabled={!isLastMessage}
-                                                checked={selectedItems.includes(
-                                                  product.item_number
-                                                )}
-                                                onCheckedChange={() =>
-                                                  handleCheckboxChange(
+                                  {message?.compareInputValue?.item_number_match
+                                    .length > 0 && (
+                                    <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-1">
+                                      {message?.compareInputValue?.item_number_match?.map(
+                                        (product, index) => (
+                                          <Card
+                                            key={index}
+                                            className="bg-white dark:bg-gray-800 rounded-lg shadow-lg h-full flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                          >
+                                            <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                                              <div className="flex justify-between items-start">
+                                                <CardTitle className="text-sm font-bold text-white truncate max-w-full">
+                                                  {product.title
+                                                    .charAt(0)
+                                                    .toUpperCase() +
+                                                    product.title.slice(1)}
+                                                </CardTitle>
+                                                <Checkbox
+                                                  disabled={!isLastMessage}
+                                                  checked={selectedItems.includes(
                                                     product.item_number
-                                                  )
-                                                }
-                                                className="h-5 w-5 ml-3 border-white bg-white text-white"
-                                              />
-                                            </div>
-                                          </CardHeader>
-                                          <CardContent className="p-2 flex-grow">
-                                            <div className="flex items-center justify-between px-2 mb-2">
-                                              <CardDescription className="flex uppercase items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                <Tag className="w-4 h-4 mr-2  text-blue-500" />
-                                                <span className="capitalize">
-                                                  Item No :{" "}
-                                                </span>
-                                                {product.item_number}
-                                              </CardDescription>
-                                              <Link
-                                                href={`/${product.item_number}`}
-                                                target="_blank"
-                                                className="flex items-center justify-end"
-                                              >
-                                                <ExternalLink className="w-4 h-4 ml-2" />
-                                              </Link>
-                                            </div>
-                                          </CardContent>
-                                        </Card>
-                                      )
-                                    )}
-                                  </div>
+                                                  )}
+                                                  onCheckedChange={() =>
+                                                    handleCheckboxChange(
+                                                      product.item_number
+                                                    )
+                                                  }
+                                                  className="h-5 w-5 ml-3 border-white bg-white text-white"
+                                                />
+                                              </div>
+                                            </CardHeader>
+                                            <CardContent className="p-2 flex-grow">
+                                              <div className="flex items-center justify-between px-2 mb-2">
+                                                <CardDescription className="flex uppercase items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                  <Tag className="w-4 h-4 mr-2  text-blue-500" />
+                                                  <span className="capitalize">
+                                                    Item No :{" "}
+                                                  </span>
+                                                  {product.item_number}
+                                                </CardDescription>
+                                                <Link
+                                                  href={`/${product.item_number}`}
+                                                  target="_blank"
+                                                  className="flex items-center justify-end"
+                                                >
+                                                  <ExternalLink className="w-4 h-4 ml-2" />
+                                                </Link>
+                                              </div>
+                                            </CardContent>
+                                          </Card>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
                                   {message?.compareInputValue?.product_suggest
                                     .length > 0 && (
                                     <div className="px-1">
                                       Product Found (based on Product name)
                                     </div>
                                   )}
+                                  {message?.compareInputValue?.product_suggest
+                                    .length > 0 && (
+                                    <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-1">
+                                      {message?.compareInputValue?.product_suggest?.map(
+                                        (category, catIndex) => (
+                                          <div key={catIndex}>
+                                            {/* Displaying the key as the header */}
+                                            <h2 className="text-xl font-bold text-gray-800 dark:text-white my-4">
+                                              {category.key}
+                                            </h2>
 
-                                  <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-1">
-                                    {message?.compareInputValue?.product_suggest?.map(
-                                      (category, catIndex) => (
-                                        <div key={catIndex}>
-                                          {/* Displaying the key as the header */}
-                                          <h2 className="text-xl font-bold text-gray-800 dark:text-white my-4">
-                                            {category.key}
-                                          </h2>
-
-                                          {/* Mapping over the value array */}
-                                          {category?.value?.map(
-                                            (product, valIndex) => (
-                                              <Card
-                                                key={valIndex}
-                                                className="flex mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
-                                              >
-                                                <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
-                                                  <div className="flex justify-between items-start">
-                                                    <CardTitle className="text-sm font-bold text-white truncate max-w-full">
-                                                      {product?.name
-                                                        .charAt(0)
-                                                        .toUpperCase() +
-                                                        product?.name.slice(1)}
-                                                    </CardTitle>
-                                                    <Checkbox
-                                                      disabled={!isLastMessage}
-                                                      checked={selectedItems.includes(
-                                                        product?.item_number
-                                                      )}
-                                                      onCheckedChange={() =>
-                                                        handleCheckboxChange(
+                                            {/* Mapping over the value array */}
+                                            {category?.value?.map(
+                                              (product, valIndex) => (
+                                                <Card
+                                                  key={valIndex}
+                                                  className="flex mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                                                >
+                                                  <CardHeader className="p-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                                                    <div className="flex justify-between items-start">
+                                                      <CardTitle className="text-sm font-bold text-white truncate max-w-full">
+                                                        {product?.name
+                                                          .charAt(0)
+                                                          .toUpperCase() +
+                                                          product?.name.slice(
+                                                            1
+                                                          )}
+                                                      </CardTitle>
+                                                      <Checkbox
+                                                        disabled={
+                                                          !isLastMessage
+                                                        }
+                                                        checked={selectedItems.includes(
                                                           product?.item_number
-                                                        )
-                                                      }
-                                                      className="h-5 w-5 ml-3 border-white bg-white text-white"
-                                                    />
-                                                  </div>
-                                                </CardHeader>
-
-                                                <CardContent className="p-2 flex-grow">
-                                                  <div className="px-2 mb-2">
-                                                    <CardDescription className="flex uppercase items-center justify-start text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                      <Tag className="w-4 h-4 mr-2 text-blue-500" />
-                                                      <span className="capitalize">
-                                                        Item No :{" "}
-                                                      </span>
-                                                      {product.item_number}
-                                                    </CardDescription>
-                                                    <div className="mb-4">
-                                                      <div className="flex items-center mb-1">
-                                                        <Info className="w-4 h-4 mr-2 text-blue-500" />
-                                                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                                          Overview
-                                                        </h3>
-                                                      </div>
-                                                      <p
-                                                        className={`text-sm text-gray-700 dark:text-gray-200 ${
-                                                          expandedItems[
-                                                            valIndex
-                                                          ]
-                                                            ? ""
-                                                            : "line-clamp-3"
-                                                        }`}
-                                                      >
-                                                        {capitalizeFirstLetter(
-                                                          product?.overview
                                                         )}
-                                                      </p>
-                                                      {/* {product?.overview
+                                                        onCheckedChange={() =>
+                                                          handleCheckboxChange(
+                                                            product?.item_number
+                                                          )
+                                                        }
+                                                        className="h-5 w-5 ml-3 border-white bg-white text-white"
+                                                      />
+                                                    </div>
+                                                  </CardHeader>
+
+                                                  <CardContent className="p-2 flex-grow">
+                                                    <div className="px-2 mb-2">
+                                                      <CardDescription className="flex uppercase items-center justify-start text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                        <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                                                        <span className="capitalize">
+                                                          Item No :{" "}
+                                                        </span>
+                                                        {product.item_number}
+                                                      </CardDescription>
+                                                      <div className="mb-4">
+                                                        <div className="flex items-center mb-1">
+                                                          <Info className="w-4 h-4 mr-2 text-blue-500" />
+                                                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                            Overview
+                                                          </h3>
+                                                        </div>
+                                                        <p
+                                                          className={`text-sm text-gray-700 dark:text-gray-200 ${
+                                                            expandedItems[
+                                                              valIndex
+                                                            ]
+                                                              ? ""
+                                                              : "line-clamp-3"
+                                                          }`}
+                                                        >
+                                                          {capitalizeFirstLetter(
+                                                            product?.overview
+                                                          )}
+                                                        </p>
+                                                        {/* {product?.overview
                                                         ?.length > 150 && (
                                                         <Button
                                                           variant="link"
@@ -1200,23 +1210,24 @@ export default function Component({ params }) {
                                                             : "Show more"}
                                                         </Button>
                                                       )} */}
+                                                      </div>
+                                                      <Link
+                                                        href={`/${product.item_number}`}
+                                                        target="_blank"
+                                                        className="flex items-center justify-end"
+                                                      >
+                                                        <ExternalLink className="w-4 h-4 ml-2" />
+                                                      </Link>
                                                     </div>
-                                                    <Link
-                                                      href={`/${product.item_number}`}
-                                                      target="_blank"
-                                                      className="flex items-center justify-end"
-                                                    >
-                                                      <ExternalLink className="w-4 h-4 ml-2" />
-                                                    </Link>
-                                                  </div>
-                                                </CardContent>
-                                              </Card>
-                                            )
-                                          )}
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
+                                                  </CardContent>
+                                                </Card>
+                                              )
+                                            )}
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
                                   <div className="px-2 flex items-center justify-end">
                                     {(message?.compareInputValue
                                       ?.item_number_match.length > 0 ||
@@ -1433,7 +1444,8 @@ export default function Component({ params }) {
                     {product?.title}
                   </h1>
                   <p className="text-sm font-light tracking-wider text-gray-600 dark:text-gray-400">
-                    Item # {product?.item_number} | Mfr # {product?.mfr_number}
+                    Item #{" "}
+                    <span className="uppercase"> {product?.item_number}</span>
                   </p>
                   <div className="flex items-center space-x-1 mt-2">
                     {[...Array(5)].map((_, i) => (
