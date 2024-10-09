@@ -107,13 +107,7 @@ export default function Component({ params }) {
   const [question1Answer, setQuestion1Answer] = useState("");
   const [question2Answer, setQuestion2Answer] = useState("");
   const [imageBase64, setImageBase64] = useState();
-  const [messages, setMessages] = useState([
-    {
-      text: "Welcome to our customer service chat. How may I assist you today?",
-      isBot: true,
-      id: 1,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [buttons, setButtons] = useState([]);
 
   const getProductdetails = () => {
@@ -169,6 +163,7 @@ export default function Component({ params }) {
         behavior: "smooth", // Enables smooth scrolling
       });
     }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleSendMessage = async (id, question) => {
@@ -492,7 +487,6 @@ export default function Component({ params }) {
           setLoading(false);
           clearInterval(typingInterval);
           setIsTyping(false);
-          setBotExpand(true);
           setMessages((prevMessages) => [
             ...prevMessages,
             {
@@ -589,7 +583,7 @@ export default function Component({ params }) {
     } else if (questionNumber === 2) {
       const uniqueSelectedItems = [...new Set(selectedItems)]; // Remove duplicates
       const selectedItemsString = uniqueSelectedItems.join(", "); // Create a string from unique items
-      fetchCompare(selectedItemsString);
+      fetchComapare(selectedItemsString);
     }
   };
 
@@ -655,7 +649,7 @@ export default function Component({ params }) {
             {/* Left column: Images and Chat */}
             <div
               className={clsx("transition-all duration-500 space-y-4", {
-                "lg:w-1/2": !botExpand,
+                "lg:w-5/6": !botExpand,
                 "lg:w-11/12": botExpand,
               })}
             >
@@ -822,34 +816,36 @@ export default function Component({ params }) {
 
               {/* Chat Section */}
               <div className="pt-2 ">
-                <div className="rounded-ss-md rounded-se-md bg-gradient-to-r from-blue-500 to-blue-600 p-3 flex items-center justify-between gap-2">
-                  <div className="text-white flex items-center justify-start gap-2">
-                    <BotMessageSquare className="w-8 h-8" />
-                    <p className="text-xl font-bold">RetailGenie</p>
+                {messages?.length > 0 && (
+                  <div className="rounded-ss-md rounded-se-md bg-gradient-to-r from-blue-500 to-blue-600 p-3 flex items-center justify-between gap-2">
+                    <div className="text-white flex items-center justify-start gap-2">
+                      <BotMessageSquare className="w-8 h-8" />
+                      <p className="text-xl font-bold">Marina</p>
+                    </div>
+                    {/* <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        className="text-white hover:text-white bg-blue-600 hover:bg-blue-600/80"
+                        onClick={() => setBotExpand(!botExpand)}
+                      >
+                        {!botExpand ? (
+                          <Maximize2 className="w-6 h-6" />
+                        ) : (
+                          <Minimize2 className="w-6 h-6" />
+                        )}
+                      </Button>
+                    </div> */}
                   </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <Button
-                      variant="ghost"
-                      className="text-white hover:text-white bg-blue-600 hover:bg-blue-600/80"
-                      onClick={() => setBotExpand(!botExpand)}
-                    >
-                      {!botExpand ? (
-                        <Maximize2 className="w-6 h-6" />
-                      ) : (
-                        <Minimize2 className="w-6 h-6" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                )}
                 <div className="w-full space-y-4">
                   <motion.div
-                    initial={{ height: 300 }}
-                    animate={{
-                      height: botExpand ? 500 : 300,
-                    }}
-                    transition={{ duration: 0.5 }} // You can adjust the duration here
+                    // initial={{ height: 300 }}
+                    // animate={{
+                    //   height: botExpand ? 500 : 300,
+                    // }}
+                    // transition={{ duration: 0.5 }} // You can adjust the duration here
                     className={clsx(
-                      "w-full border border-gray-300 rounded-ee-md rounded-es-md p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm overflow-y-scroll scrollbar-none scrollbar-thumb-gray-400 scrollbar-track-gray-200"
+                      "w-full h-auto rounded-ee-md rounded-es-md p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm  scrollbar-none scrollbar-thumb-gray-400 scrollbar-track-gray-200"
                     )}
                     ref={scrollAreaRef}
                   >
@@ -867,35 +863,12 @@ export default function Component({ params }) {
                               message.isBot ? "flex-row" : "flex-row-reverse"
                             }`}
                           >
-                            <Avatar
-                              className={`w-8 h-8 ${
-                                message.isBot ? "mr-2" : "ml-2"
-                              }`}
-                            >
-                              <AvatarImage
-                                src={
-                                  message.isBot
-                                    ? "/placeholder.svg?height=32&width=32"
-                                    : "/placeholder.svg?height=32&width=32"
-                                }
-                              />
-                              <AvatarFallback
-                                className={clsx(
-                                  "text-sm",
-                                  message.isBot
-                                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                                    : ""
-                                )}
-                              >
-                                {message.isBot ? "AI" : "You"}
-                              </AvatarFallback>
-                            </Avatar>
                             <div
                               className={`inline-block px-4 py-2 rounded-lg ${
                                 message.isBot
-                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
-                                  : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
-                              } shadow-md`}
+                                  ? " text-blue-800 "
+                                  : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100 shadow-md"
+                              } `}
                             >
                               {message?.image && (
                                 <img
@@ -1407,13 +1380,7 @@ export default function Component({ params }) {
                     {isTyping && (
                       <div className="flex justify-start mb-4">
                         <div className="flex items-start">
-                          <Avatar className="w-8 h-8 mr-2">
-                            <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                            <AvatarFallback className="text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                              AI
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="px-4 py-2 rounded-lg bg-blue-100 text-blue-800 dark:bg-[#e85a7a] dark:text-blue-100 shadow-md">
+                          <div className="px-4 py-2 rounded-lg text-blue-800">
                             {loading ? (
                               <ThreeDotLoader />
                             ) : (
@@ -1424,81 +1391,81 @@ export default function Component({ params }) {
                       </div>
                     )}
                     <div ref={messagesEndRef} />
-                  </motion.div>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {buttons?.map((btn, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        disabled={loading || isTyping}
-                        size="sm"
-                        onClick={() =>
-                          handleSendMessage(btn?.id, btn?.questions)
-                        }
-                        className="border-blue-300 text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-all duration-300 transform hover:scale-105"
-                      >
-                        {btn?.questions}
-                      </Button>
-                    ))}
-                  </div>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleTypeMessage(inputText);
-                    }}
-                    className="flex space-x-2 relative"
-                  >
-                    {imageBase64 && (
-                      <div className="shadow-md rounded-lg absolute -top-14 left-0 z-10">
-                        <div className="relative">
-                          <img
-                            src={imageBase64}
-                            alt="Selected image"
-                            className="w-14 h-14 rounded-lg object-cover"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={handleRemoveImage}
-                            className="absolute -top-2 -right-2 rounded-full w-5 h-5 p-0"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    <Input
-                      type="text"
-                      placeholder="Type your message here..."
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      className="flex-grow border-gray-300 focus:border-gray-300 focus:ring-gray-300 dark:border-blue-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                    />
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        ref={fileInputRef}
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition-all duration-300 transform hover:scale-105"
-                      >
-                        <ImageIcon className="h-5 w-5" />
-                      </Button>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {buttons?.map((btn, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          disabled={loading || isTyping}
+                          size="sm"
+                          onClick={() =>
+                            handleSendMessage(btn?.id, btn?.questions)
+                          }
+                          className="border-blue-300 text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-all duration-300 transform hover:scale-105"
+                        >
+                          {btn?.questions}
+                        </Button>
+                      ))}
                     </div>
-                    <Button
-                      type="submit"
-                      disabled={loading || isTyping}
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-[#d40029] text-white transition-all duration-300 transform hover:scale-105"
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleTypeMessage(inputText);
+                      }}
+                      className="flex space-x-2 relative"
                     >
-                      <Send className="h-5 w-5 rotate-45" />
-                    </Button>
-                  </form>
+                      {imageBase64 && (
+                        <div className="shadow-md rounded-lg absolute -top-14 left-0 z-10">
+                          <div className="relative">
+                            <img
+                              src={imageBase64}
+                              alt="Selected image"
+                              className="w-14 h-14 rounded-lg object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={handleRemoveImage}
+                              className="absolute -top-2 -right-2 rounded-full w-5 h-5 p-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      <Input
+                        type="text"
+                        placeholder="Type your message here..."
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        className="flex-grow border-gray-300 focus:border-gray-300 focus:ring-gray-300 dark:border-blue-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                      />
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          ref={fileInputRef}
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition-all duration-300 transform hover:scale-105"
+                        >
+                          <ImageIcon className="h-5 w-5" />
+                        </Button>
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={loading || isTyping}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-[#d40029] text-white transition-all duration-300 transform hover:scale-105"
+                      >
+                        <Send className="h-5 w-5 rotate-45" />
+                      </Button>
+                    </form>
+                  </motion.div>
                 </div>
               </div>
             </div>
