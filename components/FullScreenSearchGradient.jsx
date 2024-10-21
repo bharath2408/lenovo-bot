@@ -267,8 +267,10 @@ export default function FullScreenSearchGradient() {
   }
 
   const handleSearch = async () => {
-    await searchLaptops(searchTerm);
-    await searchSolor(searchTerm);
+    if (searchTerm) {
+      await searchLaptops(searchTerm);
+      await searchSolor(searchTerm);
+    }
   };
 
   const parseSpecs = (specsString) => {
@@ -303,12 +305,19 @@ export default function FullScreenSearchGradient() {
           <input
             disabled={loading}
             ref={searchInputRef}
-            className="p-2 h-full bg-gray-100 flex-grow rounded-l-full focus:outline-none px-4"
+            className={clsx(
+              "p-2 h-full bg-gray-100 flex-grow rounded-l-full focus:outline-none px-4"
+            )}
             type="text"
             placeholder="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onClick={openSearch}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchTerm) {
+                handleSearch();
+              }
+            }}
           />
           <div className="p-4" disabled={loading} onClick={handleSearch}>
             <Search className="h-5 w-5 text-white" />
