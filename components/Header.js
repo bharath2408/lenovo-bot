@@ -1,11 +1,12 @@
 import Image from "next/image";
 import { FaSearch, FaShoppingCart, FaUser } from "react-icons/fa";
 import { PiUserCircle } from "react-icons/pi";
+import FullScreenSearchGradient from "./FullScreenSearchGradient";
 
 const Header = () => {
   return (
     <>
-      <header className="shadow-lg bg-white fixed top-0 right-0 left-0 z-50">
+      <header className="shadow-lg sticky bg-white top-0 right-0 left-0 z-50">
         {/* Logo */}
         <div className="p-2 flex flex-col sm:flex-row items-center justify-between">
           <div className="flex text-blue-600 italic items-center flex-grow sm:flex-grow-0 text-xl p-2 font-bold">
@@ -13,7 +14,7 @@ const Header = () => {
           </div>
 
           {/* Desktop Search */}
-          <div className="hidden sm:flex md:flex xl:flex items-center h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full cursor-pointer mx-2 flex-grow max-w-3xl shadow-md">
+          {/* <div className="hidden sm:flex md:flex xl:flex items-center h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full cursor-pointer mx-2 flex-grow max-w-3xl shadow-md">
             <input
               className="p-2 h-full bg-gray-100 flex-grow rounded-l-full focus:outline-none px-4"
               type="text"
@@ -22,7 +23,9 @@ const Header = () => {
             <div className="p-4">
               <FaSearch className="h-5 w-5 text-white" />
             </div>
-          </div>
+          </div> */}
+
+          <FullScreenSearchGradient />
 
           {/* Right Section */}
           <div className="flex items-center space-x-6 mx-2 text-black">
@@ -50,7 +53,7 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="px-4 text-sm shadow-md bg-gradient-to-r from-blue-500 to-blue-600 fixed w-full h-8 flex items-center gap-2 text-white">
+        <div className="px-4 text-sm shadow-md bg-gradient-to-r from-blue-500 to-blue-600 w-full h-8 flex items-center gap-2 text-white">
           {/* <div>Top Brands</div> */}
         </div>
       </header>

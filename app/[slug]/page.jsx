@@ -42,6 +42,9 @@ import { data } from "@/lib/data";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import axios from "axios";
 import clsx from "clsx";
+// import SpeechRecognition from "react-speech-recognition";
+
+import { useSpeechRecognition } from "@/Hook/useSpeechRecognition";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -63,6 +66,8 @@ import {
   MapPinIcon,
   Maximize2,
   MessageCircle,
+  Mic,
+  MicOff,
   Minimize2,
   MinusCircle,
   Send,
@@ -101,14 +106,24 @@ const predefinedQuestions = [
 export default function Component({ params }) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
+
   const [botExpand, setBotExpand] = useState(false);
   const [expandedItems, setExpandedItems] = useState([]);
+  const [accessoriesItems, setAccessoriesItems] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [question1Answer, setQuestion1Answer] = useState("");
   const [question2Answer, setQuestion2Answer] = useState("");
   const [imageBase64, setImageBase64] = useState();
+
   const [messages, setMessages] = useState([]);
   const [buttons, setButtons] = useState([]);
+  const {
+    isListening,
+    transcript,
+    startListening,
+    stopListening,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
 
   const getProductdetails = () => {
     return data?.filter((item) => item?.item_number == params?.slug);
@@ -567,6 +582,13 @@ export default function Component({ params }) {
     }));
   };
 
+  const handleAccessoriesToggle = (index) => {
+    setAccessoriesItems((prevExpandedItems) => ({
+      ...prevExpandedItems,
+      [index]: !prevExpandedItems[index], // Toggle the current item's expanded state
+    }));
+  };
+
   const handleQuestionAnswer = (questionNumber, answer) => {
     if (questionNumber === 1) {
       const selectedItemsString = selectedItems.join(", ");
@@ -634,11 +656,25 @@ export default function Component({ params }) {
     }
   };
 
+  useEffect(() => {
+    if (transcript) {
+      handleTypeMessage(transcript);
+    }
+  }, [transcript]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
   console.log(imageBase64);
 
   return (
     <>
-      <div className="min-w-screen min-h-screen mt-[7%] p-4">
+      <div className="min-w-screen min-h-screen p-4">
         <div className="max-w-8xl mx-auto">
           <div
             className={clsx("lg:flex lg:space-x-8", {
@@ -901,7 +937,10 @@ export default function Component({ params }) {
                                             <div className="flex items-center mb-2">
                                               <Tag className="w-4 h-4 mr-2 text-blue-500" />
                                               <CardDescription className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                Item No: {product.item_number}
+                                                Item No:{" "}
+                                                <span className="uppercase">
+                                                  {product.item_number}
+                                                </span>
                                               </CardDescription>
                                             </div>
                                             <div className="mb-4">
@@ -913,23 +952,27 @@ export default function Component({ params }) {
                                               </div>
                                               <p
                                                 className={`text-sm text-gray-700 dark:text-gray-200 ${
-                                                  expandedItems[index]
+                                                  accessoriesItems[index]
                                                     ? ""
                                                     : "line-clamp-3"
                                                 }`}
                                               >
-                                                {product?.overview}
+                                                {capitalizeFirstLetter(
+                                                  product?.overview
+                                                )}
                                               </p>
                                               {product?.overview?.length >
                                                 150 && (
                                                 <Button
                                                   variant="link"
                                                   onClick={() =>
-                                                    handleExpandToggle(index)
+                                                    handleAccessoriesToggle(
+                                                      index
+                                                    )
                                                   }
                                                   className="mt-1 p-0 h-auto text-blue-500 hover:text-blue-700"
                                                 >
-                                                  {expandedItems[index]
+                                                  {accessoriesItems[index]
                                                     ? "Show less"
                                                     : "Show more"}
                                                 </Button>
@@ -993,7 +1036,10 @@ export default function Component({ params }) {
                                             <div className="flex items-center mb-2">
                                               <Tag className="w-4 h-4 mr-2 text-blue-500" />
                                               <CardDescription className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                Item No: {product.item_number}
+                                                Item No:{" "}
+                                                <span className="uppercase">
+                                                  {product.item_number}
+                                                </span>
                                               </CardDescription>
                                             </div>
                                             <div className="mb-4">
@@ -1010,7 +1056,9 @@ export default function Component({ params }) {
                                                     : "line-clamp-3"
                                                 }`}
                                               >
-                                                {product?.overview}
+                                                {capitalizeFirstLetter(
+                                                  product?.overview
+                                                )}
                                               </p>
                                               {product?.overview?.length >
                                                 150 && (
@@ -1142,7 +1190,9 @@ export default function Component({ params }) {
                                           <div key={catIndex}>
                                             {/* Displaying the key as the header */}
                                             <h2 className="text-xl font-bold text-gray-800 dark:text-white my-4">
-                                              {category.key}
+                                              {capitalizeFirstLetter(
+                                                category.key
+                                              )}
                                             </h2>
 
                                             {/* Mapping over the value array */}
@@ -1411,6 +1461,7 @@ export default function Component({ params }) {
                       onSubmit={(e) => {
                         e.preventDefault();
                         handleTypeMessage(inputText);
+                        setInputText("");
                       }}
                       className="flex space-x-2 relative"
                     >
@@ -1434,13 +1485,37 @@ export default function Component({ params }) {
                           </div>
                         </div>
                       )}
-                      <Input
-                        type="text"
-                        placeholder="Type your message here..."
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        className="flex-grow border-gray-300 focus:border-gray-300 focus:ring-gray-300 dark:border-blue-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                      />
+                      <div className="relative flex-grow">
+                        <Input
+                          type="text"
+                          disabled={loading || isTyping || isListening}
+                          placeholder="Type your message here..."
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          className="pr-10 border-gray-300 focus:border-gray-300 focus:ring-gray-300 dark:border-blue-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                        />
+                        <>
+                          <div
+                            onClick={toggleListening}
+                            className={`absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer ${
+                              isListening ? "text-red-500" : "text-gray-500"
+                            }`}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={
+                              isListening
+                                ? "Stop speech recognition"
+                                : "Start speech recognition"
+                            }
+                          >
+                            {isListening ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </div>
+                        </>
+                      </div>
                       <div className="relative">
                         <input
                           type="file"
@@ -1451,6 +1526,7 @@ export default function Component({ params }) {
                         />
                         <Button
                           type="button"
+                          disabled={loading || isTyping}
                           onClick={() => fileInputRef.current?.click()}
                           className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition-all duration-300 transform hover:scale-105"
                         >
@@ -1460,7 +1536,7 @@ export default function Component({ params }) {
                       <Button
                         type="submit"
                         disabled={loading || isTyping}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-[#d40029] text-white transition-all duration-300 transform hover:scale-105"
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-300 transform hover:scale-105"
                       >
                         <Send className="h-5 w-5 rotate-45" />
                       </Button>
@@ -1770,3 +1846,37 @@ const ThreeDotLoader = () => (
     ))}
   </div>
 );
+
+function MicToggle({ isListening, toggleListening }) {
+  return (
+    <div
+      onClick={toggleListening}
+      className={`
+        absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer
+        w-8 h-8 rounded-full flex items-center justify-center
+        transition-all duration-300 ease-in-out
+        ${
+          isListening
+            ? "bg-red-500 text-white shadow-lg shadow-red-300"
+            : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+        }
+      `}
+      role="button"
+      tabIndex={0}
+      aria-label={
+        isListening ? "Stop speech recognition" : "Start speech recognition"
+      }
+    >
+      {isListening ? (
+        <div className="relative">
+          <MicOff className="h-4 w-4 z-10 relative" />
+          <div className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-75"></div>
+          <div className="absolute inset-0 animate-pulse rounded-full bg-red-300 opacity-75"></div>
+          <div className="absolute -inset-1 animate-spin rounded-full border-2 border-red-500 opacity-50"></div>
+        </div>
+      ) : (
+        <Mic className="h-4 w-4" />
+      )}
+    </div>
+  );
+}
