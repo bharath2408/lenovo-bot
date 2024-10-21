@@ -250,6 +250,7 @@ export default function FullScreenSearchGradient() {
   const closeSearch = () => {
     setIsSearchOpen(false);
     setSearchTerm("");
+    setSearchTechniques(null);
     setSelectedProduct(null);
   };
 
