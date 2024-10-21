@@ -344,7 +344,7 @@ export default function FullScreenSearchGradient() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="container px-6 py-2">
+          <div className="w-full container px-6 py-2">
             {/* Search Bar */}
             <div className="sticky top-0 z-10 p-2 bg-white flex items-center justify-between mb-2">
               {/* <div className="flex items-center h-10 bg-gradient-to-r from-blue-600 to-blue-500 rounded-sm cursor-pointer mx-2 flex-grow max-w-3xl shadow-md">
