@@ -11,8 +11,8 @@ import {
 import axios from "axios";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
-import { Loader2, Search, X } from "lucide-react";
-import React, { useRef, useState } from "react";
+import { Loader2, Mic, MicOff, Search, X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -187,6 +187,8 @@ export default function FullScreenSearchGradient() {
   const searchInputRef = useRef(null);
   const [searchTechniques, setSearchTechniques] = useState();
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   const searchLaptops = async (searchQuery) => {
     const url =
@@ -221,6 +223,30 @@ export default function FullScreenSearchGradient() {
       setSearchTechniques((prev) => ({
         ...prev,
         solr_hybrid: response?.data?.slice(0, 5),
+      }));
+      setLoading(false);
+      return response.data; // Return the response data
+    } catch (error) {
+      console.error("Error making the API call:", error);
+      throw error;
+    } finally {
+      setLoading(false); // Set loading to false once the API call is complete
+    }
+  };
+
+  const searchNeoFourG = async (searchQuery) => {
+    const url = "/api/bot";
+    const payload = {
+      search_query: searchQuery,
+    };
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(url, payload);
+      setSearchTechniques((prev) => ({
+        ...prev,
+        graph: response?.data,
       }));
       setLoading(false);
       return response.data; // Return the response data
@@ -270,6 +296,7 @@ export default function FullScreenSearchGradient() {
   const handleSearch = async () => {
     if (searchTerm) {
       await searchLaptops(searchTerm);
+      await searchNeoFourG(searchTerm);
       await searchSolor(searchTerm);
     }
   };
@@ -292,6 +319,44 @@ export default function FullScreenSearchGradient() {
     selectedProduct?.concatenated_text || selectedProduct?.content
   );
 
+  useEffect(() => {
+    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map((result) => result[0])
+          .map((result) => result.transcript)
+          .join("");
+
+        setSearchTerm(transcript);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
   console.log(searchTechniques);
 
   return (
@@ -302,7 +367,7 @@ export default function FullScreenSearchGradient() {
           flex: !isSearchOpen,
         })}
       >
-        <div className="hidden sm:flex md:flex xl:flex items-center h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full cursor-pointer mx-2 flex-grow shadow-md">
+        <div className="relative hidden sm:flex md:flex xl:flex items-center h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full cursor-pointer mx-2 flex-grow shadow-md">
           <input
             disabled={loading}
             ref={searchInputRef}
@@ -320,6 +385,29 @@ export default function FullScreenSearchGradient() {
               }
             }}
           />
+          {/* <Button
+            variant="ghost"
+            size="icon"
+            className={clsx(
+              "rounded-full p-2 h-10 w-10 absolute",
+              isListening
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-white text-blue-500 hover:bg-gray-100"
+            )}
+            onClick={toggleListening}
+            disabled={
+              !(
+                "SpeechRecognition" in window ||
+                "webkitSpeechRecognition" in window
+              )
+            }
+          >
+            {isListening ? (
+              <MicOff className="h-5 w-5" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )}
+          </Button> */}
           <div className="p-4" disabled={loading} onClick={handleSearch}>
             <Search className="h-5 w-5 text-white" />
           </div>
@@ -433,7 +521,7 @@ export default function FullScreenSearchGradient() {
                                     whileTap={{ scale: 0.97 }}
                                   >
                                     <h3 className="font-medium text-sm text-gray-800 truncate">
-                                      {product?.title}
+                                      {product?.title || product?.tittle}
                                     </h3>
                                     <p className="flex items-center justify-between uppercase text-sm text-gray-500">
                                       {product?.part_number}
@@ -467,7 +555,9 @@ export default function FullScreenSearchGradient() {
         >
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>{selectedProduct?.title}</DialogTitle>
+              <DialogTitle>
+                {selectedProduct?.title || selectedProduct?.tittle}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
               <p className="text-muted-foreground text-sm">
@@ -495,7 +585,8 @@ export default function FullScreenSearchGradient() {
                             {formatKey(key)}
                           </TableCell>
                           <TableCell>
-                            {key === "operating system" ? (
+                            {key === "operating system" ||
+                            key === "operating_system" ? (
                               <div
                                 dangerouslySetInnerHTML={{ __html: value }}
                               />
